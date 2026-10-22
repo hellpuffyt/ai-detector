@@ -1,5 +1,8 @@
 import json
+import math
+import os
 import time
+from collections.abc import Mapping
 from typing import Any, Callable, Concatenate, ParamSpec
 
 import openai
@@ -13,23 +16,44 @@ POSITIVE_STATUS = "completed"
 P = ParamSpec("P")
 
 
-def get_env() -> dict[str, str]:
+API_KEY_ENV_VARS = ("OPENAI_API_KEY", "OPEN_AI_KEY")
+
+
+def get_env(path: str = ".env") -> dict[str, str]:
     env: dict[str, str] = {}
 
-    with open(".env") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, value = line.split("=", 1)
-                env[key.strip()] = value.strip()
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    env[key.strip()] = value.strip()
+    except FileNotFoundError:
+        pass
 
     return env
 
 
+def get_api_key(environ: Mapping[str, str] | None = None, env_path: str = ".env") -> str:
+    """Return the OpenAI API key from the process environment, falling back to a .env file."""
+    environ = os.environ if environ is None else environ
+    file_env = get_env(env_path)
+
+    for source in (environ, file_env):
+        for name in API_KEY_ENV_VARS:
+            value = source.get(name, "").strip()
+            if value:
+                return value
+
+    raise SystemExit(
+        "No OpenAI API key found: set OPENAI_API_KEY in the environment "
+        f"or in {env_path} (see .env.example)."
+    )
+
+
 def get_client() -> openai.OpenAI:
-    env = get_env()
-    api_key = env["OPEN_AI_KEY"]
-    return openai.OpenAI(api_key=api_key)
+    return openai.OpenAI(api_key=get_api_key())
 
 
 def prepare_batch_file(
@@ -43,16 +67,20 @@ def prepare_batch_file(
     *user_prompt_args: P.args,
     **user_prompt_kwargs: P.kwargs,
 ) -> set[str]:
-    # Get number of lines
+    # Get number of lines that will actually be used
     n_lines = 0
     with open(input_path, "r", encoding="utf-8") as f:
         for line in f:
             n_lines += 1
+    if max_lines:
+        n_lines = min(n_lines, max_lines)
 
-    lines_per_split = n_lines // split_file_count
+    # Ceil so the remainder goes into the last split instead of an extra file.
+    lines_per_split = max(1, math.ceil(n_lines / split_file_count))
 
-    # Write to output files
-    used_outputs = set()
+    # Write to output files (truncating any output from a previous run, so
+    # re-running never duplicates requests / custom_ids in a batch file)
+    used_outputs: set[str] = set()
     with open(input_path, "r", encoding="utf-8") as fin:
         for idx, line in enumerate(fin):
             if max_lines and idx + 1 > max_lines:
@@ -87,8 +115,9 @@ def prepare_batch_file(
                     + f"_{idx // lines_per_split}."
                     + path_split[-1]
                 )
+            mode = "a" if output_path in used_outputs else "w"
             used_outputs.add(output_path)
-            with open(output_path, "a", encoding="utf-8") as fout:
+            with open(output_path, mode, encoding="utf-8") as fout:
                 fout.write(json.dumps(request, ensure_ascii=False))
                 fout.write("\n")
 

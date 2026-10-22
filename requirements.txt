@@ -1,0 +1,4 @@
+# Runtime dependencies for run_detector.py / test_inference.py
+transformers>=4.57
+torch>=2.9
+peft>=0.18
