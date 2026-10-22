@@ -1,5 +1,14 @@
 # AI Slop Detector
-An end-to-end implementation of an AI writing detector
+![CI](https://github.com/hellpuffyt/ai-detector/actions/workflows/ci.yml/badge.svg)
+
+An end-to-end implementation of an AI writing detector: data collection, data generation, LoRA fine-tuning, inference and benchmarking.
+
+> **Provenance.** This repository is a copy of [gouwsxander/slop-detector](https://github.com/gouwsxander/slop-detector)
+> (MIT, Copyright (c) 2025 Xander). The dataset and the trained adapter it uses are published on Hugging Face under
+> [gouwsxander](https://huggingface.co/gouwsxander). "Our"/"we" below refers to that original work.
+
+**Status:** research / educational. The detector is a probability estimate, not proof of authorship — do not use it
+to make decisions about people (see [Limitations](#limitations)).
 
 ## Data
 To train our classifier, we needed many examples of human-written text and AI-generated text.
@@ -25,7 +34,7 @@ It can also be found at `/data/wikipedia.jsonl` in this repository.
 
 ## Model
 Our model is a LoRA adapter of `bert-base-cased`, with a classification head.
-- Validation accuracy: 96%
+- Validation accuracy: 96% (re-checked: 964/997 = 96.7% on the seed-42 5% split rebuilt by `training/src/train.py`'s `get_datasets()`, using the published adapter on CPU; see docs/PRODUCTION_READINESS.md)
 - Training was done with HuggingFace
 - The code for training is contained in `/training`
 
@@ -61,31 +70,61 @@ print(f"AI probability: {ai_probability:.4f}")  # > 0.5 = AI-generated
 ```
 
 #### Quick Start Script
-A ready-to-use script is provided in `run_detector.py`. To run it:
+A ready-to-use script is provided in `run_detector.py`. To run it (Python 3.11+):
 
 1. Set up a virtual environment and install dependencies:
    ```
-   pip install transformers torch peft
+   python -m venv .venv && source .venv/bin/activate
+   pip install -r requirements.txt
    ```
 
 2. Run the script with text input:
-   - Interactive: `python run_detector.py`
-   - From file: `python run_detector.py your_text.txt`
+   - From file: `python run_detector.py input_text.txt` (the whole file is classified as one text)
+   - From stdin: `cat your_text.txt | python run_detector.py`
+   - Interactive: `python run_detector.py`, type or paste the text, then press Enter on an empty line (or Ctrl-D)
 
-Texts with probability > 0.5 are estimated to be AI-generated.
+The first run downloads `bert-base-cased` (~436 MB) and the LoRA adapter (~11 MB) from Hugging Face into the
+standard Hugging Face cache (`HF_HOME`); later runs work offline with `HF_HUB_OFFLINE=1`.
+Neither the base model nor the adapter is stored in this repository.
 
-You may see warnings about model loading and weights—these are normal and can be ignored.
+Example (real output from `python run_detector.py input_text.txt`):
+```
+Classifying texts:
+--------------------------------------------------
+Text: This is some sample text to test the AI detector.
+...
+Probability: 0.0026 (Human-written)
+```
+
+Texts with probability > 0.5 are estimated to be AI-generated. Input longer than 512 tokens is truncated, so only
+the beginning of a long text is scored.
+
+You may see warnings about model loading and weights (the base model's `classifier.*` weights are reported as
+missing); these are normal: the classifier head is loaded from the LoRA adapter right after.
 
 ## Benchmark Performance and Limitations
 We test our model on the [RAID benchmark](https://github.com/liamdugan/raid) training set to get a sense of the model's limitations.
 
 ### RAID Benchmark Performance
-Our model performed better than random guessing across all model families and most domains, indicating that general, transferable properties of AI-generated writing were learned.
+Our model performed better than random guessing (ROC AUC > 0.5) across all model families and all domains, though only
+barely for arXiv abstracts (AUC 0.55), indicating that some general, transferable properties of AI-generated writing were learned.
 
-The best TPR@FPR=1% measures were seen for IMDB movie reviews, Wikipedia, and arXiv abstracts.
-- The TPR@FPR=1% for reviews was about 90%
-- The TPR@FPR=1% for Wikipedia, arXiv abstracts, and news articles was between 30% and 40%
-- The TPR@FPR=1% for book excerpts, recipes, poetry, and Reddit posts was between 1% and 20%
+TPR@FPR=1% per domain, recomputed from the committed `raid/analysis/predictions_10000.csv` (`take_max` aggregator,
+the one `run_analysis.py` plots; checked by `tests/test_raid_analysis.py`):
+
+| Domain | TPR@FPR=1% | TPR@FPR=5% | ROC AUC |
+|---|---|---|---|
+| reviews | 86.5% | 90.0% | 0.97 |
+| wiki | 35.2% | 45.2% | 0.80 |
+| abstracts | 31.9% | 37.9% | 0.55 |
+| news | 26.3% | 37.1% | 0.76 |
+| books | 19.4% | 61.9% | 0.86 |
+| recipes | 7.7% | 16.2% | 0.67 |
+| poetry | 2.2% | 30.8% | 0.59 |
+| reddit | 0.7% | 5.2% | 0.77 |
+
+Caveat: the 10,000-row sample contains only 277 human-written texts (about 35 per domain), so a 1% false-positive
+rate cannot really be resolved per domain; treat the TPR@FPR=1% column as very noisy.
 
 Text generated by LLaMA was the most likely to be detected.
 
@@ -93,8 +132,37 @@ The code and results for this analysis is contained in `/raid`.
 
 ### Limitations
 This model has several important limitations:
+- It produces a probability, not proof; false positives on human writing are expected, so it must not be used on its own to accuse anyone
 - Our dataset contains only Wikipedia-style text
 - Our dataset contains only generations from GPT 5 Nano
 - We assume Wikipedia is currently entirely human-generated
 - The model has a context window of 512 tokens
 - It was trained on one paragraph of text at a time
+
+## Repository layout and size
+The repository is ~14 MB because it versions the **data**, not model weights: `data-generation/tmp/` holds the raw
+OpenAI Batch API inputs/outputs (~47 MB uncompressed), `data/wikipedia.jsonl` (~10 MB) is the final dataset,
+`scrapes/` the raw Wikipedia scrape (~5 MB) and `raid/analysis/predictions_10000.csv` (~1.3 MB) the benchmark
+predictions. No model weights or binaries are committed. `python src/combine_data.py` (run from `data-generation/`)
+regenerates `data/wikipedia.jsonl` byte-for-byte from the committed batch outputs, which is why they are kept.
+
+Each stage (`scraping/`, `data-generation/`, `training/`, `raid/`) is a separate [uv](https://docs.astral.sh/uv/)
+project with its own `pyproject.toml` and `uv.lock`; run them from inside their directory (`uv run src/<script>.py`).
+- `data-generation/` needs an OpenAI API key in `OPENAI_API_KEY` (or a git-ignored `data-generation/.env`, see `.env.example`) and costs money.
+- `training/` expects a CUDA GPU and writes checkpoints to `models/` (git-ignored).
+- `raid/` expects the RAID training CSV at `raid/raid-dataset/train_none.csv` (git-ignored, download from the RAID project) and a local checkpoint in `models/`.
+
+## Testing
+```
+pip install -r requirements-dev.txt
+python -m pytest
+```
+The suite covers input handling of `run_detector.py`, the data-generation batch-file builder and API-key lookup,
+the scraper's paragraph filter, the RAID aggregators and analysis helpers. The inference test uses a tiny,
+randomly initialised stand-in BERT (`hf-internal-testing/tiny-random-BertForSequenceClassification`) to exercise
+the code path only; it needs network access to the Hugging Face Hub and says nothing about detection quality.
+`test_inference.py` at the repo root is a smoke script for the real model (`python test_inference.py`), not part of the suite.
+See [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md) for what has and has not been verified.
+
+## License
+MIT, see [LICENSE](LICENSE).
