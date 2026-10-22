@@ -5,7 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11.4"
 dependencies = [
-    "wikipedia-api>=0.8.1",
+    # main.py catches requests.exceptions.Timeout, which only wikipedia-api 0.8.x raises
+    # (later releases switched to httpx), and imports requests directly.
+    "requests>=2.32",
+    "wikipedia-api>=0.8.1,<0.9",
 ]
 
 [tool.ruff]

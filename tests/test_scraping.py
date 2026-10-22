@@ -32,3 +32,16 @@ def test_random_list_pops_every_item_once():
     while items:
         popped.append(items.pop())
     assert sorted(popped) == list(range(20))
+
+
+def test_scraper_timeout_handler_matches_the_pinned_wikipedia_api():
+    # Regression: requirements allowed wikipedia-api >= 0.9, which dropped requests,
+    # so `from requests.exceptions import Timeout` failed and timeouts were never caught.
+    from importlib.metadata import requires, version
+
+    import requests
+
+    assert scraper.Timeout is requests.exceptions.Timeout
+    major, minor = (int(x) for x in version("wikipedia-api").split(".")[:2])
+    assert (major, minor) < (0, 9)
+    assert any(r.startswith("requests") for r in requires("wikipedia-api") or [])

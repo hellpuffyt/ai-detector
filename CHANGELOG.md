@@ -10,6 +10,7 @@ All notable changes to this project are documented here (format: Keep a Changelo
 - `raid/src/aggregators.py`: `all_or_nothing` returned NaN for long texts (float underflow of both products); now computed in log space.
 - `data-generation/src/utils.py`: splitting a batch file whose line count is not divisible by the split count produced an extra file; more splits than lines divided by zero; re-running appended duplicate requests (duplicate `custom_id`s) to existing batch files.
 - `data-generation/src/utils.py`: the API key can now come from `OPENAI_API_KEY` in the environment; a missing key gives a clear error instead of a `FileNotFoundError`/`KeyError`.
+- `scraping/`: the scraper imports `requests` and catches `requests.exceptions.Timeout`, but neither `requests` nor an upper bound on `wikipedia-api` was declared; wikipedia-api >= 0.9 switched to httpx, so a fresh resolve broke the import. Now `requests` is declared and `wikipedia-api` is pinned to `<0.9`.
 ### Added
 - Test suite (`tests/`), `requirements.txt` / `requirements-dev.txt`, GitHub Actions CI, `SECURITY.md`, `CONTRIBUTING.md`, `.editorconfig`, `data-generation/.env.example`, `docs/PRODUCTION_READINESS.md`.
 ### Changed

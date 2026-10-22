@@ -2,7 +2,9 @@
 -r requirements.txt
 pytest>=8
 openai>=2.8.1
-wikipedia-api>=0.8.1
+# same constraint as scraping/pyproject.toml (the scraper relies on its requests-based API)
+wikipedia-api>=0.8.1,<0.9
+requests>=2.32
 numpy>=2
 pandas>=2.3
 scikit-learn>=1.7
