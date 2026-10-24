@@ -3,6 +3,11 @@
 All notable changes to this project are documented here (format: Keep a Changelog).
 
 ## [Unreleased]
+### Security
+- `training/uv.lock` and `raid/uv.lock` pinned torch 2.9, transformers 4.57, aiohttp 3.13.2, datasets 4.4,
+  accelerate, fsspec, fonttools and multidict versions with published advisories; relocked to fixed releases
+  (torch 2.14.1, transformers 5.20.2). The default Linux torch wheels are now CUDA 13 builds, which need a recent
+  NVIDIA driver. `requirements.txt` floors raised to `transformers>=5.10`, `torch>=2.13`.
 ### Fixed
 - `run_detector.py`: piped stdin without a trailing empty line crashed with `EOFError`; stdin is now read as one text.
 - `run_detector.py`: interactive input was classified line by line; the lines are now joined into one text, as the prompt implies.
