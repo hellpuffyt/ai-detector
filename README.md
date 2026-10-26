@@ -6,14 +6,51 @@ An end-to-end AI writing detector: a Wikipedia scraper, OpenAI Batch API data ge
 
 [Case study ↗](https://hellpuff.dev/work/ai-detector)
 
-<img src="docs/assets/overview.svg" width="100%" alt="Pipeline diagram: scraping/ produces 10,001 Wikipedia paragraphs, data-generation/ summarizes and rewrites them with gpt-5-nano, combine_data.py writes 9,970 pairs to data/wikipedia.jsonl, training/ fits a LoRA adapter on bert-base-cased, which run_detector.py and raid/ use">
-
 > **Provenance.** This repository is a copy of [gouwsxander/slop-detector](https://github.com/gouwsxander/slop-detector)
 > (MIT, Copyright (c) 2025 Xander). The dataset and the trained adapter it uses are published on Hugging Face under
 > [gouwsxander](https://huggingface.co/gouwsxander). "Our"/"we" below refers to that original work.
 
 **Status:** research and educational code. The detector gives a probability estimate, not proof of authorship. Do not
 use it to make decisions about people (see [Limitations](#limitations)).
+
+## Demo
+
+<img src="docs/screenshots/run-detector-terminal.png" width="100%" alt="Terminal running run_detector.py twice: the sample file scores 0.0026 (human-written), an AI-written paragraph from the dataset scores 0.9985 (AI-generated)">
+
+Real terminal capture: `run_detector.py` on the bundled `input_text.txt`, then on the AI-written half of the last row of
+`data/wikipedia.jsonl` (a paragraph the model saw in training or validation, so this shows the script working, not
+how well it generalizes). Hugging Face loading warnings on stderr are hidden with `2>/dev/null`. Setup is in
+[Quick Start Script](#quick-start-script).
+
+```console
+$ python run_detector.py input_text.txt 2>/dev/null
+Loading tokenizer...
+Loading base model...
+Loading LoRA adapter...
+
+Classifying texts:
+--------------------------------------------------
+Text: This is some sample text to test the AI detector.
+...
+Probability: 0.0026 (Human-written)
+
+$ tail -1 data/wikipedia.jsonl | python -c "import json,sys; print(json.load(sys.stdin)['ai_text'])" \
+    | python run_detector.py 2>/dev/null
+Loading tokenizer...
+Loading base model...
+Loading LoRA adapter...
+
+Classifying texts:
+--------------------------------------------------
+Text: On August 16, 2010, Cox Communications converted W...
+Probability: 0.9985 (AI-generated)
+```
+
+## Pipeline
+
+<img src="docs/assets/overview.svg" width="100%" alt="Pipeline diagram: scraping/ produces 10,001 Wikipedia paragraphs, data-generation/ summarizes and rewrites them with gpt-5-nano, combine_data.py writes 9,970 pairs to data/wikipedia.jsonl, training/ fits a LoRA adapter on bert-base-cased, which run_detector.py and raid/ use">
+
+Diagram of the stages in this repository and the files that connect them.
 
 ## Data
 To train our classifier, we needed many examples of human-written text and AI-generated text.
