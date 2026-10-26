@@ -72,7 +72,7 @@ plausible, not that it is exactly reproduced.
 ## CI
 `.github/workflows/ci.yml`: one Ubuntu job, Python 3.12, CPU-only torch, `pytest`. Actions pinned to commit SHAs
 (checkout v7.0.1 `3d3c42e5…`, setup-python v7.1.0 `6d4fd22b…`, both resolved via the GitHub API), `contents: read`.
-Status — default branch: no workflow (never run); audit branch: pending until pushed.
+Status: the workflow runs on every push to `main` and on pull requests; it passed on `9570dbc` (2026-10-24).
 
 ## Bugs found and fixed (each with a regression test)
 1. Piped stdin crashed with `EOFError` (`test_piped_stdin_without_blank_line_does_not_crash`).
