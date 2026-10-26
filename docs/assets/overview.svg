@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="480" viewBox="0 0 1200 480" role="img" aria-labelledby="t d">
+  <title id="t">ai-detector pipeline</title>
+  <desc id="d">Data flows from a Wikipedia scraper through two OpenAI Batch API passes into 9,970 human and AI paragraph pairs, which train a LoRA adapter on bert-base-cased. The adapter is used by run_detector.py and by the RAID benchmark analysis.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#A3AAA6"/>
+    </marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#3FBF8A"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="480" fill="#0C0D0D"/>
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" fill="#A3AAA6">
+    <text x="40" y="44">DATA</text>
+    <text x="40" y="262">MODEL</text>
+  </g>
+
+  <!-- row 1 -->
+  <g stroke="#2A2E2D" fill="#17191A">
+    <rect x="40" y="60" width="250" height="140" rx="8"/>
+    <rect x="330" y="60" width="250" height="140" rx="8"/>
+    <rect x="620" y="60" width="250" height="140" rx="8"/>
+    <rect x="910" y="60" width="250" height="140" rx="8" stroke="#3FBF8A"/>
+  </g>
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="15" fill="#EEEAE2">
+    <text x="58" y="92">scraping/</text>
+    <text x="348" y="92">data-generation/</text>
+    <text x="638" y="92">combine_data.py</text>
+    <text x="928" y="92">data/wikipedia.jsonl</text>
+  </g>
+  <g font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="13" fill="#A3AAA6">
+    <text x="58" y="120">Randomised crawl of linked</text>
+    <text x="58" y="140">articles, up to 2 paragraphs</text>
+    <text x="58" y="160">per page after filtering</text>
+    <text x="58" y="184" fill="#EEEAE2">10,001 paragraphs</text>
+
+    <text x="348" y="120">OpenAI Batch API, gpt-5-nano</text>
+    <text x="348" y="140">pass 1: summarize to key points</text>
+    <text x="348" y="160">pass 2: write a new paragraph</text>
+    <text x="348" y="184" fill="#EEEAE2">paid, needs OPENAI_API_KEY</text>
+
+    <text x="638" y="120">Joins each rewrite back to</text>
+    <text x="638" y="140">its source paragraph by id</text>
+    <text x="638" y="160">31 failed requests dropped</text>
+    <text x="638" y="184" fill="#EEEAE2">byte-for-byte reproducible</text>
+
+    <text x="928" y="120">page_title, human_text,</text>
+    <text x="928" y="140">ai_text per line</text>
+    <text x="928" y="160">also on Hugging Face</text>
+    <text x="928" y="184" fill="#EEEAE2">9,970 pairs</text>
+  </g>
+  <g stroke="#A3AAA6" stroke-width="1.5" fill="none">
+    <line x1="292" y1="130" x2="327" y2="130" marker-end="url(#a)"/>
+    <line x1="582" y1="130" x2="617" y2="130" marker-end="url(#a)"/>
+    <line x1="872" y1="130" x2="907" y2="130" marker-end="url(#a)"/>
+    <path d="M1035 202 V232 H165 V275" marker-end="url(#a)"/>
+  </g>
+
+  <!-- row 2 -->
+  <g stroke="#2A2E2D" fill="#17191A">
+    <rect x="40" y="278" width="250" height="150" rx="8"/>
+    <rect x="330" y="278" width="250" height="150" rx="8" stroke="#3FBF8A"/>
+    <rect x="620" y="278" width="540" height="66" rx="8"/>
+    <rect x="620" y="362" width="540" height="66" rx="8"/>
+  </g>
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="15" fill="#EEEAE2">
+    <text x="58" y="310">training/</text>
+    <text x="348" y="310">LoRA adapter</text>
+    <text x="638" y="306">run_detector.py</text>
+    <text x="638" y="390">raid/</text>
+  </g>
+  <g font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="13" fill="#A3AAA6">
+    <text x="58" y="338">bert-base-cased + LoRA r=16</text>
+    <text x="58" y="358">2-class head, 5 epochs, fp16</text>
+    <text x="58" y="378">95/5 train/validation split</text>
+    <text x="58" y="410" fill="#EEEAE2">needs a CUDA GPU</text>
+
+    <text x="348" y="338">local: models/ checkpoint</text>
+    <text x="348" y="358">published:</text>
+    <text x="348" y="378">gouwsxander/slop-detector-bert</text>
+    <text x="348" y="410" fill="#EEEAE2">96.7% validation accuracy</text>
+
+    <text x="638" y="330">file, stdin or typed text; first 512 tokens scored; P(AI) &gt; 0.5 = AI</text>
+    <text x="638" y="414">RAID train set sample (10,000 rows): ROC AUC and TPR@FPR by domain</text>
+  </g>
+  <g stroke-width="1.5" fill="none">
+    <line x1="292" y1="353" x2="327" y2="353" stroke="#A3AAA6" marker-end="url(#a)"/>
+    <path d="M582 340 H600 V311 H617" stroke="#3FBF8A" marker-end="url(#g)"/>
+    <path d="M582 366 H600 V395 H617" stroke="#A3AAA6" marker-end="url(#a)"/>
+  </g>
+  <text x="40" y="462" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" fill="#A3AAA6">Each stage is a separate uv project. run_detector.py downloads the published adapter; raid/ loads the local checkpoint from models/.</text>
+</svg>
